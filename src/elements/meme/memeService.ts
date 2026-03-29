@@ -60,7 +60,7 @@ Use the drawn content as inspiration. If text is written, incorporate it. If a f
   const userContent: Exclude<ChatMessage['content'], string> = [
     {
       type: 'image_url',
-      imageUrl: { url: imageDataUrl },
+      image_url: { url: imageDataUrl },
     },
     {
       type: 'text',

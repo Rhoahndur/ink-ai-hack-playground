@@ -1,36 +1,18 @@
-// OpenRouter service - client for LLM inference via OpenRouter
+// OpenRouter service - direct HTTP client for LLM inference via OpenRouter
+//
+// Uses fetch directly instead of the @openrouter/sdk to avoid SDK Zod
+// validation issues with multimodal (image) content parts.
 //
 // WARNING: The API key (INK_OPENROUTER_API_KEY) is embedded into the client
 // bundle at build time and visible in browser DevTools. Only use a scoped,
 // low-privilege, rate-limited key. For production, route calls through a
 // backend proxy that holds the secret server-side.
 
-import { OpenRouter } from '@openrouter/sdk';
-
-let openRouterInstance: OpenRouter | null = null;
-
-function getOpenRouter(): OpenRouter {
-  if (!openRouterInstance) {
-    const apiKey = import.meta.env.INK_OPENROUTER_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        'INK_OPENROUTER_API_KEY is not set. ' +
-        'Add it to your .env.local file (see .env.example).'
-      );
-    }
-
-    openRouterInstance = new OpenRouter({
-      apiKey,
-      httpReferer: import.meta.env.INK_OPENROUTER_SITE_URL || window.location.origin,
-      xTitle: import.meta.env.INK_OPENROUTER_SITE_NAME || 'Ink Playground',
-    });
-  }
-  return openRouterInstance;
-}
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; imageUrl: { url: string } }>;
+  content: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
 }
 
 export interface JsonSchema {
@@ -50,41 +32,59 @@ export interface ChatOptions {
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 
 /**
- * Send a chat completion request via OpenRouter.
+ * Send a chat completion request via OpenRouter's REST API.
  */
 export async function chatCompletion(
   messages: ChatMessage[],
   options: ChatOptions = {},
 ): Promise<string> {
-  const client = getOpenRouter();
+  const apiKey = import.meta.env.INK_OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      'INK_OPENROUTER_API_KEY is not set. ' +
+      'Add it to your .env.local file (see .env.example).'
+    );
+  }
 
-  // Map our responseFormat to the SDK's expected shape
-  let responseFormat: { type: 'json_object' } | { type: 'json_schema'; jsonSchema: { name: string; strict?: boolean; schema: Record<string, unknown> } } | undefined;
+  // Build response_format for the API
+  let response_format: Record<string, unknown> | undefined;
   if (options.responseFormat === 'json') {
-    responseFormat = { type: 'json_object' };
+    response_format = { type: 'json_object' };
   } else if (options.responseFormat) {
-    responseFormat = {
+    response_format = {
       type: 'json_schema',
-      jsonSchema: options.responseFormat.jsonSchema,
+      json_schema: options.responseFormat.jsonSchema,
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const completion: any = await client.chat.send({
-    chatGenerationParams: {
-      model: options.model ?? DEFAULT_MODEL,
-      // Cast messages — our ChatMessage type is compatible but TS can't
-      // narrow the discriminated union from a mapped array.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: messages as any,
-      stream: false,
-      temperature: options.temperature,
-      maxTokens: options.maxTokens,
-      responseFormat,
+  const body: Record<string, unknown> = {
+    model: options.model ?? DEFAULT_MODEL,
+    messages,
+    stream: false,
+  };
+  if (options.temperature !== undefined) body.temperature = options.temperature;
+  if (options.maxTokens !== undefined) body.max_tokens = options.maxTokens;
+  if (response_format) body.response_format = response_format;
+
+  const res = await fetch(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': import.meta.env.INK_OPENROUTER_SITE_URL || window.location.origin,
+      'X-Title': import.meta.env.INK_OPENROUTER_SITE_NAME || 'Ink Playground',
     },
+    body: JSON.stringify(body),
   });
 
-  return completion?.choices?.[0]?.message?.content?.toString() ?? '';
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenRouter API error ${res.status}: ${text}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
+  return data?.choices?.[0]?.message?.content?.toString() ?? '';
 }
 
 /**
