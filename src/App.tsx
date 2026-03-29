@@ -463,9 +463,7 @@ function App() {
         debugLog.info('Lasso meme: recognition unavailable, proceeding without text context');
       }
 
-      const hint = recognizedText
-        ? `The user wrote: "${recognizedText}". This is their creative direction — generate a meme that DELIVERS on this intent (e.g., if they wrote "yo momma joke", generate an actual yo momma joke as the caption).`
-        : undefined;
+      const hint = recognizedText || undefined;
       const interpretation = await interpretSketch(dataUrl, hint);
       debugLog.info('Lasso meme: interpretation', interpretation);
 

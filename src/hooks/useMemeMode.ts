@@ -99,7 +99,7 @@ export function useMemeMode(): UseMemeMode {
       let bitmapDataUrl: string | null = null;
       try {
         debugLog.info('Attempting AI image generation...');
-        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl, interpretation.description);
+        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl);
         if (bitmapDataUrl) {
           debugLog.info('AI image generation succeeded!');
         }

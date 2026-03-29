@@ -82,7 +82,7 @@ If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" o
   // Combine system prompt + user request into a single user message.
   // Some free models (e.g. gemma-3-12b) don't support the "system" role.
   const userText = hint
-    ? `Interpret this sketch as a meme. ${hint}\n\nIMPORTANT: The user's text/intent described above is your PRIMARY creative direction. Generate caption text that DELIVERS on what they asked for — don't just describe or reference it, actually make the joke they're requesting.`
+    ? `Interpret this sketch as a meme. The user wrote: "${hint}". This is their PRIMARY creative direction — generate caption text that DELIVERS on what they asked for. Don't just describe or reference it, actually make the joke they're requesting.`
     : 'Interpret this sketch as a meme. What meme format and text should this become? Be genuinely funny!';
 
   const userContent: Exclude<ChatMessage['content'], string> = [
@@ -201,7 +201,7 @@ export async function generateMemeImage(
   if (userIntent) {
     prompt += ` The user's original creative direction: "${userIntent}" — make sure the meme delivers on this intent.`;
   }
-  if (interpretation.description) {
+  if (interpretation.description && interpretation.description !== userIntent) {
     prompt += ` Context from the original sketch: ${interpretation.description}`;
   }
 
