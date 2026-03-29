@@ -35,6 +35,7 @@ import { detectRectangleX, lastRectXRejection, type RectangleXResult } from './g
 import { createPaletteIntent } from './palette';
 import type { PaletteIntent, PaletteAction } from './palette';
 import { Toaster } from './toast/Toast';
+import { useMemeMode } from './hooks/useMemeMode';
 import './App.css';
 
 
@@ -99,6 +100,15 @@ function App() {
   useNonogramGeneration(currentNote, setCurrentNote);
   useJigsawGeneration(currentNote, setCurrentNote);
   useColorConnectGeneration(currentNote, setCurrentNote);
+
+  // Meme mode: AI-interprets drawn sketches into proper memes
+  const {
+    memeMode,
+    toggleMemeMode,
+    processMemeModeStrokes,
+    interpretFullScene,
+    isInterpreting,
+  } = useMemeMode();
 
   // Ref to always access the latest note state from async callbacks (avoids stale closures)
   const currentNoteRef = useRef(currentNote);
@@ -286,6 +296,9 @@ function App() {
           break;
         case 's':
           setCurrentTool('select');
+          break;
+        case 'm':
+          toggleMemeMode();
           break;
       }
     };
@@ -721,6 +734,12 @@ function App() {
       debounceTimeoutRef.current = null;
       debugLog.info('Debounce timer FIRED — processing strokes', { count: strokesToProcess.length });
 
+      // Meme mode: divert all strokes to meme interpretation pipeline
+      if (memeMode) {
+        processMemeModeStrokes(strokesToProcess, currentNoteRef.current, setCurrentNote);
+        return;
+      }
+
       // Check for scribble erase gesture BEFORE element assignment
       // This allows quick sequences of strokes (with brief stylus lifts) to qualify as scribble erase
       const latestElements = currentNoteRef.current.elements;
@@ -812,7 +831,7 @@ function App() {
 
       processStrokes(strokesToProcess);
     }, STROKE_DEBOUNCE_MS);
-  }, [processStrokes, setCurrentNote]);
+  }, [processStrokes, setCurrentNote, memeMode, processMemeModeStrokes]);
 
   // Handle elements change (for eraser)
   const handleElementsChange = useCallback((elements: Element[]) => {
@@ -1112,6 +1131,19 @@ function App() {
             </svg>
           </button>
           <button
+            className={memeMode ? 'active' : ''}
+            onClick={toggleMemeMode}
+            title={`Meme mode (M) ${memeMode ? '- ON' : '- OFF'}${isInterpreting ? ' [interpreting...]' : ''}`}
+            style={memeMode ? { background: '#4ade80', color: '#000' } : undefined}
+          >
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="18" r="10" fill={memeMode ? '#6B8E23' : 'none'} stroke="currentColor" strokeWidth="2" />
+              <circle cx="12" cy="15" r="3" fill={memeMode ? 'white' : 'none'} stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="20" cy="15" r="3" fill={memeMode ? 'white' : 'none'} stroke="currentColor" strokeWidth="1.5" />
+              <path d="M11 22 Q16 25 21 22" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            </svg>
+          </button>
+          <button
             onClick={handleAddSketchableImage}
             title="Add AI sketch canvas"
           >
@@ -1249,7 +1281,7 @@ function App() {
       <footer className="status-bar">
         <span>Elements: {currentNote.elements.length}</span>
         <span>|</span>
-        <span>P: Pen • S: Select • E: Eraser • H: Pan • Space+drag: Pan • Scroll: Pan • Ctrl+Scroll: Zoom</span>
+        <span>P: Pen • S: Select • E: Eraser • H: Pan • M: Meme{memeMode ? ' (ON)' : ''} • Space+drag: Pan</span>
       </footer>
     </div>
   );

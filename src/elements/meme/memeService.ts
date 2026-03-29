@@ -1,0 +1,119 @@
+// Meme interpretation service — sends canvas screenshots to a free vision model
+// via OpenRouter to understand sketches and generate meme specifications.
+
+import { chatCompletion, isOpenRouterConfigured } from '../../ai/OpenRouterService';
+import type { MemeCategory, MemeText } from './types';
+
+// Free vision model on OpenRouter
+const VISION_MODEL = 'google/gemma-3-27b-it:free';
+
+export interface MemeInterpretation {
+  category: MemeCategory;
+  variant?: string;
+  texts: MemeText[];
+  description: string;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Send a canvas screenshot to the vision model and get a meme interpretation.
+ * The model identifies what's drawn, reads any text, and suggests the best meme format.
+ */
+export async function interpretSketch(
+  imageDataUrl: string,
+  hint?: string,
+): Promise<MemeInterpretation> {
+  if (!isOpenRouterConfigured()) {
+    throw new Error('OpenRouter API key not configured');
+  }
+
+  const systemPrompt = `You are a meme expert. You interpret hand-drawn sketches and convert them into proper meme specifications.
+
+Given a screenshot of a hand-drawn sketch, you must:
+1. Read any handwritten text
+2. Identify what characters/objects are drawn
+3. Determine the best meme format
+4. Generate appropriate meme text/captions
+
+Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
+{
+  "category": "pepe" | "wojak" | "drake" | "brain" | "impact",
+  "variant": "<specific variant>",
+  "texts": [
+    {"text": "<caption text>", "position": "top" | "bottom"}
+  ],
+  "description": "<brief description of what you see>",
+  "width": 400,
+  "height": 400
+}
+
+Category details:
+- "pepe": Pepe/Apu frog memes. Variants: "smug", "sad", "angry", "happy", "thinking", "comfy"
+- "wojak": Wojak face memes. Variants: "doomer", "bloomer", "chad", "soyjak", "crying"
+- "drake": Two-panel Drake format. Must have exactly 2 texts: first with position "top" (rejected thing), second with position "bottom" (approved thing). Use height: 400.
+- "brain": Expanding brain. 2-4 texts from least to most "enlightened". All position "custom". Use height: 200 * number_of_panels.
+- "impact": Classic Impact font meme. Top and/or bottom text.
+
+Use the drawn content as inspiration. If text is written, incorporate it. If a frog/pepe is drawn, use "pepe" category. If a face is drawn, consider "wojak". Default to "impact" if unclear.`;
+
+  const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
+    {
+      type: 'image_url',
+      image_url: { url: imageDataUrl },
+    },
+    {
+      type: 'text',
+      text: hint
+        ? `Interpret this sketch as a meme. Additional context from the user: "${hint}"`
+        : 'Interpret this sketch as a meme. What meme format and text should this become?',
+    },
+  ];
+
+  const raw = await chatCompletion(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+    {
+      model: VISION_MODEL,
+      temperature: 0.7,
+      maxTokens: 500,
+    },
+  );
+
+  // Parse JSON from response (handle potential markdown code fences)
+  let jsonStr = raw.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) {
+    jsonStr = fenceMatch[1].trim();
+  }
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    return {
+      category: parsed.category || 'impact',
+      variant: parsed.variant,
+      texts: Array.isArray(parsed.texts) ? parsed.texts : [],
+      description: parsed.description || '',
+      width: parsed.width || 400,
+      height: parsed.height || 400,
+    };
+  } catch {
+    // Fallback: treat the whole response as impact meme text
+    return {
+      category: 'impact',
+      texts: [{ text: raw.slice(0, 100), position: 'top' }],
+      description: 'Failed to parse vision model response',
+    };
+  }
+}
+
+/**
+ * Interpret the full scene (all canvas content) — used for long-press.
+ */
+export async function interpretScene(
+  imageDataUrl: string,
+): Promise<MemeInterpretation> {
+  return interpretSketch(imageDataUrl, 'This is the full canvas scene. Interpret the overall composition as a single meme.');
+}
