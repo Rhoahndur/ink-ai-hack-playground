@@ -91,11 +91,12 @@ Use the drawn content as inspiration. If text is written, incorporate it. If a f
       width: (parsed.width as number) || 400,
       height: (parsed.height as number) || 400,
     };
-  } catch {
+  } catch (err) {
+    console.error('[MemeService] interpretSketch failed:', err);
     return {
       category: 'impact',
       texts: [{ text: 'meme generation failed', position: 'top' }],
-      description: 'Failed to parse vision model response',
+      description: `Failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 }
