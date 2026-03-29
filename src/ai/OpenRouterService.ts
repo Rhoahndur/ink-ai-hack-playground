@@ -140,10 +140,17 @@ export async function chatCompletionImage(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
+  const message = data?.choices?.[0]?.message;
+  const content = message?.content;
 
-  // Log the raw response structure so we can debug the format
-  console.log('[OpenRouter] Image gen raw response:', JSON.stringify(data?.choices?.[0]?.message, null, 2)?.slice(0, 2000));
+  // Gemini returns images in a separate `images` array on the message
+  if (Array.isArray(message?.images)) {
+    for (const img of message.images) {
+      if (img.type === 'image_url' && img.image_url?.url) {
+        return img.image_url.url;
+      }
+    }
+  }
 
   // Response can be multimodal array or a string
   if (Array.isArray(content)) {

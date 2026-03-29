@@ -1,7 +1,7 @@
 // Meme interpretation service — sends canvas screenshots to a free vision model
 // via OpenRouter to understand sketches and generate meme specifications.
 
-import { chatCompletionJSON, chatCompletionImage, isOpenRouterConfigured, type ChatMessage } from '../../ai/OpenRouterService';
+import { chatCompletion, chatCompletionImage, isOpenRouterConfigured, type ChatMessage } from '../../ai/OpenRouterService';
 import type { MemeCategory, MemeText } from './types';
 
 // Free vision models on OpenRouter (fallback order)
@@ -98,10 +98,10 @@ If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" o
   for (const model of VISION_MODELS) {
     try {
       console.log(`[MemeService] Trying model: ${model}`);
-      const parsed = await chatCompletionJSON<Record<string, unknown>>(
-        messages,
-        { model, temperature: 0.7, maxTokens: 500 },
-      );
+      const raw = await chatCompletion(messages, { model, temperature: 0.7, maxTokens: 500 });
+      // Strip markdown fences if present
+      const jsonStr = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
+      const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
 
       return {
         category: (parsed.category as MemeCategory) || 'impact',
