@@ -58,6 +58,9 @@ export function getPlugins(): ElementPlugin<Element>[] {
 // Rendering Dispatch
 // ============================================================================
 
+// Only warn once per missing element type to avoid flooding the console on every frame
+const warnedMissingTypes = new Set<string>();
+
 /**
  * Render any element using its registered plugin.
  */
@@ -69,7 +72,8 @@ export function renderElement(
   const plugin = plugins.get(element.type);
   if (plugin) {
     plugin.render(ctx, element, options);
-  } else {
+  } else if (!warnedMissingTypes.has(element.type)) {
+    warnedMissingTypes.add(element.type);
     debugLog.warn(`No plugin registered for element type: ${element.type}`);
   }
 }
@@ -82,7 +86,10 @@ export function getElementBounds(element: Element): BoundingBox | null {
   if (plugin) {
     return plugin.getBounds(element);
   }
-  debugLog.warn(`No plugin registered for element type: ${element.type}`);
+  if (!warnedMissingTypes.has(element.type)) {
+    warnedMissingTypes.add(element.type);
+    debugLog.warn(`No plugin registered for element type: ${element.type}`);
+  }
   return null;
 }
 
