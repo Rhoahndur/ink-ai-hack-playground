@@ -102,6 +102,64 @@ export async function chatCompletionJSON<T = unknown>(
 }
 
 /**
+ * Send a chat request to an image-generation model and extract the generated image.
+ * Returns the image as a data URL (data:image/png;base64,...) or null if no image.
+ */
+export async function chatCompletionImage(
+  messages: ChatMessage[],
+  options: ChatOptions = {},
+): Promise<string | null> {
+  const apiKey = import.meta.env.INK_OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('INK_OPENROUTER_API_KEY is not set.');
+  }
+
+  const body: Record<string, unknown> = {
+    model: options.model ?? 'google/gemini-2.5-flash-image',
+    messages,
+    stream: false,
+  };
+  if (options.temperature !== undefined) body.temperature = options.temperature;
+  if (options.maxTokens !== undefined) body.max_tokens = options.maxTokens;
+
+  const res = await fetch(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': import.meta.env.INK_OPENROUTER_SITE_URL || window.location.origin,
+      'X-Title': import.meta.env.INK_OPENROUTER_SITE_NAME || 'Ink Playground',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenRouter API error ${res.status}: ${text}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
+  const content = data?.choices?.[0]?.message?.content;
+
+  // Response can be multimodal array or a string
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      if (part.type === 'image_url' && part.image_url?.url) {
+        return part.image_url.url;
+      }
+      // Some models use inline_data format
+      if (part.type === 'image' && part.source?.data) {
+        const mime = part.source.media_type || 'image/png';
+        return `data:${mime};base64,${part.source.data}`;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Check whether the OpenRouter API key is configured.
  */
 export function isOpenRouterConfigured(): boolean {

@@ -8,7 +8,7 @@ import type { Stroke, NoteElements } from '../types';
 import type { MemeElement } from '../elements/meme/types';
 import { createMemeElement } from '../elements/meme/types';
 import { renderMemeToBitmap } from '../elements/meme/templates';
-import { interpretSketch } from '../elements/meme/memeService';
+import { interpretSketch, generateMemeImage } from '../elements/meme/memeService';
 import { renderStroke } from '../canvas/StrokeRenderer';
 import { getStrokesBoundingBox } from '../elements';
 import { debugLog } from '../debug/DebugLogger';
@@ -138,13 +138,29 @@ export function useMemeMode(): UseMemeMode {
       const finalWidth = interpretation.width || memeWidth;
       const finalHeight = interpretation.height || memeHeight;
 
-      const bitmapDataUrl = renderMemeToBitmap(
-        interpretation.category,
-        interpretation.variant || '',
-        interpretation.texts,
-        finalWidth,
-        finalHeight,
-      );
+      // Try AI image generation first (high fidelity), fall back to procedural templates
+      let bitmapDataUrl: string | null = null;
+      try {
+        debugLog.info('Attempting AI image generation...');
+        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl);
+        if (bitmapDataUrl) {
+          debugLog.info('AI image generation succeeded!');
+        }
+      } catch (err) {
+        debugLog.warn('AI image generation failed, using procedural template', err);
+      }
+
+      // Fall back to procedural canvas rendering
+      if (!bitmapDataUrl) {
+        debugLog.info('Using procedural template fallback');
+        bitmapDataUrl = renderMemeToBitmap(
+          interpretation.category,
+          interpretation.variant || '',
+          interpretation.texts,
+          finalWidth,
+          finalHeight,
+        );
+      }
 
       const finalMeme: MemeElement = {
         ...placeholder,
