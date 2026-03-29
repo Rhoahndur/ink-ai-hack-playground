@@ -19,6 +19,7 @@ import type { TangoElement } from '../elements/tango/types';
 import type { QueensElement } from '../elements/queens/types';
 import type { JigsawElement } from '../elements/jigsaw/types';
 import type { ColorConnectElement } from '../elements/colorconnect/types';
+import type { MemeElement } from '../elements/meme/types';
 
 // Union type for all elements
 export type Element =
@@ -37,7 +38,8 @@ export type Element =
   | TangoElement
   | QueensElement
   | JigsawElement
-  | ColorConnectElement;
+  | ColorConnectElement
+  | MemeElement;
 
 // Check if element supports background color
 export function supportsBackgroundColor(element: Element): boolean {

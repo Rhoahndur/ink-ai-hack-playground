@@ -20,6 +20,7 @@ import './stroke';
 import './sudoku';
 import './tango';
 import './tictactoe';
+import './meme';
 
 // Re-export registry for convenience
 export {
