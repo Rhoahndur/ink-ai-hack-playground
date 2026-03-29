@@ -9,6 +9,7 @@ const VISION_MODELS = [
   'google/gemma-3-27b-it:free',
   'nvidia/nemotron-nano-12b-v2-vl:free',
   'google/gemma-3-12b-it:free',
+  'google/gemma-3-4b-it:free',
 ];
 
 export interface MemeInterpretation {
@@ -72,21 +73,24 @@ Category details:
 
 If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" or "wojak". Match the variant to the emotion shown.`;
 
+  // Combine system prompt + user request into a single user message.
+  // Some free models (e.g. gemma-3-12b) don't support the "system" role.
+  const userText = hint
+    ? `Interpret this sketch as a meme. Additional context from the user: "${hint}"`
+    : 'Interpret this sketch as a meme. What meme format and text should this become?';
+
   const userContent: Exclude<ChatMessage['content'], string> = [
+    {
+      type: 'text',
+      text: systemPrompt + '\n\n' + userText,
+    },
     {
       type: 'image_url',
       image_url: { url: imageDataUrl },
     },
-    {
-      type: 'text',
-      text: hint
-        ? `Interpret this sketch as a meme. Additional context from the user: "${hint}"`
-        : 'Interpret this sketch as a meme. What meme format and text should this become?',
-    },
   ];
 
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
     { role: 'user', content: userContent },
   ];
 
