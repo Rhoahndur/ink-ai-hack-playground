@@ -325,6 +325,21 @@ export function InkCanvas({
     };
   }, []);
 
+  // Prevent default touch behavior at the native level so that
+  // preventDefault() in React pointer-event handlers doesn't fire
+  // on a passive listener (which logs console warnings).
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    overlay.addEventListener('touchstart', prevent, { passive: false });
+    overlay.addEventListener('touchmove', prevent, { passive: false });
+    return () => {
+      overlay.removeEventListener('touchstart', prevent);
+      overlay.removeEventListener('touchmove', prevent);
+    };
+  }, []);
+
   // Render the main canvas (static content)
   const render = useCallback((timestamp?: number) => {
     const canvas = canvasRef.current;

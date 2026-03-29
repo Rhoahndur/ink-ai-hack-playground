@@ -36,9 +36,20 @@ export async function interpretSketch(
 
 Given a screenshot of a hand-drawn sketch, you must:
 1. Read any handwritten text
-2. Identify what characters/objects are drawn
-3. Determine the best meme format
-4. Generate appropriate meme text/captions
+2. Identify the MOOD and EMOTION of the drawing (happy, sad, angry, smug, thinking, etc.)
+3. Pick the best meme CHARACTER that matches that mood
+4. Generate a funny, relevant meme caption
+
+IMPORTANT RULES:
+- ALWAYS prefer character-based memes (pepe, wojak) over "impact". Impact is ONLY for when text alone is the joke.
+- Any face, smiley, expression, or emoji-like drawing → use "pepe" (for positive/neutral/funny moods) or "wojak" (for doomer/sad/chad vibes)
+- A simple smiley face = "pepe" with variant "happy" or "comfy"
+- A sad face = "pepe" with variant "sad" OR "wojak" with variant "crying"
+- An angry face = "pepe" with variant "angry"
+- A cool/confident drawing = "wojak" with variant "chad"
+- Two things being compared = "drake"
+- A progression or ranking = "brain"
+- Make the caption TEXT funny and relevant to what's drawn. Be creative and humorous!
 
 Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
 {
@@ -53,13 +64,13 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
 }
 
 Category details:
-- "pepe": Pepe/Apu frog memes. Variants: "smug", "sad", "angry", "happy", "thinking", "comfy"
+- "pepe": Pepe/Apu frog memes. USE THIS FOR MOST DRAWINGS. Variants: "smug", "sad", "angry", "happy", "thinking", "comfy"
 - "wojak": Wojak face memes. Variants: "doomer", "bloomer", "chad", "soyjak", "crying"
 - "drake": Two-panel Drake format. Must have exactly 2 texts: first with position "top" (rejected thing), second with position "bottom" (approved thing). Use height: 400.
 - "brain": Expanding brain. 2-4 texts from least to most "enlightened". All position "custom". Use height: 200 * number_of_panels.
-- "impact": Classic Impact font meme. Top and/or bottom text.
+- "impact": Classic Impact font meme. Top and/or bottom text. ONLY use this if no character meme fits.
 
-Use the drawn content as inspiration. If text is written, incorporate it. If a frog/pepe is drawn, use "pepe" category. If a face is drawn, consider "wojak". Default to "impact" if unclear.`;
+If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" or "wojak". Match the variant to the emotion shown.`;
 
   const userContent: Exclude<ChatMessage['content'], string> = [
     {
