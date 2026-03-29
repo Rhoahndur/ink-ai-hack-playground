@@ -103,10 +103,10 @@ function App() {
 
   // Meme mode: AI-interprets drawn sketches into proper memes
   const {
+    memeModeRef,
     memeMode,
     toggleMemeMode,
     processMemeModeStrokes,
-    interpretFullScene,
     isInterpreting,
   } = useMemeMode();
 
@@ -735,8 +735,8 @@ function App() {
       debugLog.info('Debounce timer FIRED — processing strokes', { count: strokesToProcess.length });
 
       // Meme mode: divert all strokes to meme interpretation pipeline
-      if (memeMode) {
-        processMemeModeStrokes(strokesToProcess, currentNoteRef.current, setCurrentNote);
+      if (memeModeRef.current) {
+        processMemeModeStrokes(strokesToProcess, setCurrentNote);
         return;
       }
 
@@ -831,7 +831,7 @@ function App() {
 
       processStrokes(strokesToProcess);
     }, STROKE_DEBOUNCE_MS);
-  }, [processStrokes, setCurrentNote, memeMode, processMemeModeStrokes]);
+  }, [processStrokes, setCurrentNote, processMemeModeStrokes]);
 
   // Handle elements change (for eraser)
   const handleElementsChange = useCallback((elements: Element[]) => {

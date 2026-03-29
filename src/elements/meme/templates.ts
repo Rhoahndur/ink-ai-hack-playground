@@ -257,13 +257,15 @@ function drawWojak(
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 2;
       ctx.stroke();
-      // Beard stubble dots
-      for (let i = 0; i < 8; i++) {
-        const bx = cx + (Math.random() - 0.5) * r * 0.6;
-        const by = cy + r * 0.35 + Math.random() * r * 0.25;
+      // Beard stubble dots (deterministic positions)
+      const stubbleOffsets = [
+        [-0.2, 0.38], [0.1, 0.42], [-0.05, 0.48], [0.2, 0.36],
+        [-0.15, 0.52], [0.05, 0.55], [0.15, 0.45], [-0.1, 0.44],
+      ];
+      for (const [ox, oy] of stubbleOffsets) {
         ctx.fillStyle = '#999';
         ctx.beginPath();
-        ctx.arc(bx, by, 1, 0, Math.PI * 2);
+        ctx.arc(cx + ox * r, cy + oy * r, 1, 0, Math.PI * 2);
         ctx.fill();
       }
       break;
@@ -423,10 +425,10 @@ export function renderMemeToCanvas(
 
   switch (category) {
     case 'pepe':
-      renderPepeMeme(ctx, variant, texts, width, height);
+      renderCharacterMeme(ctx, drawPepe, variant || 'happy', texts, width, height, '#f0f0f0');
       break;
     case 'wojak':
-      renderWojakMeme(ctx, variant, texts, width, height);
+      renderCharacterMeme(ctx, drawWojak, variant || 'bloomer', texts, width, height, '#f5f5f5');
       break;
     case 'drake':
       renderDrakeMeme(ctx, texts, width, height);
@@ -443,50 +445,15 @@ export function renderMemeToCanvas(
   ctx.restore();
 }
 
-function renderPepeMeme(
+function renderCharacterMeme(
   ctx: CanvasRenderingContext2D,
+  drawCharacter: (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, variant: string) => void,
   variant: string,
   texts: MemeText[],
   w: number, h: number,
+  bgColor: string,
 ) {
-  // Background
-  ctx.fillStyle = '#f0f0f0';
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = '#cccccc';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, w, h);
-
-  // Draw Pepe in center area
-  const charHeight = h * 0.6;
-  const charY = (h - charHeight) / 2;
-  drawPepe(ctx, 0, charY, w, charHeight, variant || 'happy');
-
-  // Top text
-  const topTexts = texts.filter(t => t.position === 'top');
-  if (topTexts.length > 0) {
-    const fontSize = Math.max(20, Math.min(36, w / 12));
-    drawMemeText(ctx, topTexts[0].text, w / 2, 8, w, fontSize);
-  }
-
-  // Bottom text
-  const bottomTexts = texts.filter(t => t.position === 'bottom');
-  if (bottomTexts.length > 0) {
-    const fontSize = Math.max(20, Math.min(36, w / 12));
-    const textHeight = drawMemeText(ctx, bottomTexts[0].text, w / 2, 0, w, fontSize);
-    // Redraw at correct position
-    ctx.fillStyle = '#f0f0f0';
-    ctx.fillRect(0, h - textHeight - 16, w, textHeight + 16);
-    drawMemeText(ctx, bottomTexts[0].text, w / 2, h - textHeight - 8, w, fontSize);
-  }
-}
-
-function renderWojakMeme(
-  ctx: CanvasRenderingContext2D,
-  variant: string,
-  texts: MemeText[],
-  w: number, h: number,
-) {
-  ctx.fillStyle = '#f5f5f5';
+  ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = '#cccccc';
   ctx.lineWidth = 2;
@@ -494,18 +461,18 @@ function renderWojakMeme(
 
   const charHeight = h * 0.6;
   const charY = (h - charHeight) / 2;
-  drawWojak(ctx, 0, charY, w, charHeight, variant || 'bloomer');
+  drawCharacter(ctx, 0, charY, w, charHeight, variant);
 
-  const topTexts = texts.filter(t => t.position === 'top');
-  if (topTexts.length > 0) {
+  const topText = texts.find(t => t.position === 'top');
+  if (topText) {
     const fontSize = Math.max(20, Math.min(36, w / 12));
-    drawMemeText(ctx, topTexts[0].text, w / 2, 8, w, fontSize);
+    drawMemeText(ctx, topText.text, w / 2, 8, w, fontSize);
   }
 
-  const bottomTexts = texts.filter(t => t.position === 'bottom');
-  if (bottomTexts.length > 0) {
+  const bottomText = texts.find(t => t.position === 'bottom');
+  if (bottomText) {
     const fontSize = Math.max(20, Math.min(36, w / 12));
-    drawMemeText(ctx, bottomTexts[0].text, w / 2, h - 44, w, fontSize);
+    drawMemeText(ctx, bottomText.text, w / 2, h - fontSize - 12, w, fontSize);
   }
 }
 

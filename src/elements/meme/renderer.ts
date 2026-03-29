@@ -1,12 +1,28 @@
 // Meme element renderer — draws meme elements on the main canvas.
-// Uses cached bitmaps when available, falls back to live rendering.
 
 import type { MemeElement } from './types';
 import type { BoundingBox } from '../../types/primitives';
 import type { RenderOptions } from '../registry/ElementPlugin';
 import { renderMemeToCanvas } from './templates';
 
+const MAX_CACHE_SIZE = 10;
 const imageCache = new Map<string, HTMLImageElement>();
+
+function getOrLoadImage(key: string, src: string): HTMLImageElement | null {
+  const existing = imageCache.get(key);
+  if (existing && existing.src === src) return existing;
+
+  // Evict oldest if at capacity
+  if (imageCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = imageCache.keys().next().value;
+    if (firstKey !== undefined) imageCache.delete(firstKey);
+  }
+
+  const img = new Image();
+  img.src = src;
+  imageCache.set(key, img);
+  return img;
+}
 
 export function render(
   ctx: CanvasRenderingContext2D,
@@ -20,7 +36,6 @@ export function render(
   ctx.translate(tx, ty);
 
   if (element.isGenerating) {
-    // Show loading state
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, element.width, element.height);
     ctx.strokeStyle = '#cccccc';
@@ -29,42 +44,24 @@ export function render(
     ctx.strokeRect(0, 0, element.width, element.height);
     ctx.setLineDash([]);
 
-    // Loading text
     ctx.fillStyle = '#888888';
     ctx.font = '18px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Generating meme...', element.width / 2, element.height / 2);
 
-    // Spinning indicator
-    const t = (Date.now() % 1000) / 1000;
-    const angle = t * Math.PI * 2;
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(element.width / 2, element.height / 2 + 30, 12, angle, angle + Math.PI * 1.5);
-    ctx.stroke();
-
     ctx.restore();
     return;
   }
 
   if (element.bitmapDataUrl) {
-    // Use cached bitmap
-    let img = imageCache.get(element.id);
-    if (!img || img.src !== element.bitmapDataUrl) {
-      img = new Image();
-      img.src = element.bitmapDataUrl;
-      imageCache.set(element.id, img);
-    }
-    if (img.complete && img.naturalWidth > 0) {
+    const img = getOrLoadImage(element.id, element.bitmapDataUrl);
+    if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, 0, 0, element.width, element.height);
     } else {
-      // Image still loading — render live
       renderMemeToCanvas(ctx, element.category, element.variant || '', element.texts, element.width, element.height);
     }
   } else {
-    // No bitmap cache — render live
     renderMemeToCanvas(ctx, element.category, element.variant || '', element.texts, element.width, element.height);
   }
 

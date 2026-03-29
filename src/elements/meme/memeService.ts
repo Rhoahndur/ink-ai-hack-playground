@@ -1,7 +1,7 @@
 // Meme interpretation service — sends canvas screenshots to a free vision model
 // via OpenRouter to understand sketches and generate meme specifications.
 
-import { chatCompletion, isOpenRouterConfigured } from '../../ai/OpenRouterService';
+import { chatCompletionJSON, isOpenRouterConfigured } from '../../ai/OpenRouterService';
 import type { MemeCategory, MemeText } from './types';
 
 // Free vision model on OpenRouter
@@ -70,40 +70,31 @@ Use the drawn content as inspiration. If text is written, incorporate it. If a f
     },
   ];
 
-  const raw = await chatCompletion(
-    [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent },
-    ],
-    {
-      model: VISION_MODEL,
-      temperature: 0.7,
-      maxTokens: 500,
-    },
-  );
-
-  // Parse JSON from response (handle potential markdown code fences)
-  let jsonStr = raw.trim();
-  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) {
-    jsonStr = fenceMatch[1].trim();
-  }
-
   try {
-    const parsed = JSON.parse(jsonStr);
+    const parsed = await chatCompletionJSON<Record<string, unknown>>(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      {
+        model: VISION_MODEL,
+        temperature: 0.7,
+        maxTokens: 500,
+      },
+    );
+
     return {
-      category: parsed.category || 'impact',
-      variant: parsed.variant,
+      category: (parsed.category as MemeCategory) || 'impact',
+      variant: parsed.variant as string | undefined,
       texts: Array.isArray(parsed.texts) ? parsed.texts : [],
-      description: parsed.description || '',
-      width: parsed.width || 400,
-      height: parsed.height || 400,
+      description: (parsed.description as string) || '',
+      width: (parsed.width as number) || 400,
+      height: (parsed.height as number) || 400,
     };
   } catch {
-    // Fallback: treat the whole response as impact meme text
     return {
       category: 'impact',
-      texts: [{ text: raw.slice(0, 100), position: 'top' }],
+      texts: [{ text: 'meme generation failed', position: 'top' }],
       description: 'Failed to parse vision model response',
     };
   }

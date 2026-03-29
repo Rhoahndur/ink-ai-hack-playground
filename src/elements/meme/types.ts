@@ -13,9 +13,6 @@ export type MemeCategory =
   | 'brain'        // Expanding brain multi-panel
   | 'impact';      // Classic top/bottom Impact text
 
-export type PepeVariant = 'smug' | 'sad' | 'angry' | 'happy' | 'thinking' | 'comfy';
-export type WojakVariant = 'doomer' | 'bloomer' | 'chad' | 'soyjak' | 'crying';
-
 export interface MemeText {
   text: string;
   position: 'top' | 'bottom' | 'custom';
