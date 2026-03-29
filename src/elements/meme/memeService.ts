@@ -33,13 +33,19 @@ export async function interpretSketch(
     throw new Error('OpenRouter API key not configured');
   }
 
-  const systemPrompt = `You are a meme expert. You interpret hand-drawn sketches and convert them into proper meme specifications.
+  const systemPrompt = `You are a meme expert and comedy writer. You interpret hand-drawn sketches and convert them into hilarious meme specifications.
 
 Given a screenshot of a hand-drawn sketch, you must:
-1. Read any handwritten text
+1. Read any handwritten text — this is the user's CREATIVE DIRECTION. If they wrote "yo momma joke", they want an actual yo momma joke. If they wrote "when monday", they want a relatable Monday meme. FOLLOW THEIR INTENT.
 2. Identify the MOOD and EMOTION of the drawing (happy, sad, angry, smug, thinking, etc.)
 3. Pick the best meme CHARACTER that matches that mood
-4. Generate a funny, relevant meme caption
+4. Generate ACTUALLY FUNNY caption text that follows the user's intent
+
+CRITICAL — HOW TO HANDLE HANDWRITTEN TEXT:
+- If the text describes a TOPIC or GENRE (e.g., "yo momma joke", "monday meme", "coding humor") → Generate an ACTUAL joke/caption about that topic. Do NOT just repeat what they wrote.
+- If the text IS a caption (e.g., "when the code compiles") → Use it directly or enhance it to be funnier.
+- If the text names an emotion or situation → Build a relatable meme around it.
+- NEVER respond with meta-commentary like "when I can't read the prompt" or "something about the drawing". Actually be funny!
 
 IMPORTANT RULES:
 - ALWAYS prefer character-based memes (pepe, wojak) over "impact". Impact is ONLY for when text alone is the joke.
@@ -50,7 +56,7 @@ IMPORTANT RULES:
 - A cool/confident drawing = "wojak" with variant "chad"
 - Two things being compared = "drake"
 - A progression or ranking = "brain"
-- Make the caption TEXT funny and relevant to what's drawn. Be creative and humorous!
+- Make the caption TEXT genuinely funny! Think like a top meme creator. Punchlines, wordplay, relatable humor.
 
 Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
 {
@@ -59,7 +65,7 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
   "texts": [
     {"text": "<caption text>", "position": "top" | "bottom"}
   ],
-  "description": "<brief description of what you see>",
+  "description": "<brief description of what you see AND the user's intent>",
   "width": 400,
   "height": 400
 }
@@ -76,8 +82,8 @@ If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" o
   // Combine system prompt + user request into a single user message.
   // Some free models (e.g. gemma-3-12b) don't support the "system" role.
   const userText = hint
-    ? `Interpret this sketch as a meme. Additional context from the user: "${hint}"`
-    : 'Interpret this sketch as a meme. What meme format and text should this become?';
+    ? `Interpret this sketch as a meme. ${hint}\n\nIMPORTANT: The user's text/intent described above is your PRIMARY creative direction. Generate caption text that DELIVERS on what they asked for — don't just describe or reference it, actually make the joke they're requesting.`
+    : 'Interpret this sketch as a meme. What meme format and text should this become? Be genuinely funny!';
 
   const userContent: Exclude<ChatMessage['content'], string> = [
     {
@@ -148,6 +154,7 @@ const IMAGE_GEN_MODELS = [
 export async function generateMemeImage(
   interpretation: MemeInterpretation,
   sketchDataUrl?: string,
+  userIntent?: string,
 ): Promise<string | null> {
   if (!isOpenRouterConfigured()) return null;
 
@@ -191,6 +198,9 @@ export async function generateMemeImage(
     if (bottomText) prompt += ` BOTTOM TEXT: "${bottomText}"`;
   }
 
+  if (userIntent) {
+    prompt += ` The user's original creative direction: "${userIntent}" — make sure the meme delivers on this intent.`;
+  }
   if (interpretation.description) {
     prompt += ` Context from the original sketch: ${interpretation.description}`;
   }

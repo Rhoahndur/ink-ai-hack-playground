@@ -464,7 +464,7 @@ function App() {
       }
 
       const hint = recognizedText
-        ? `The user wrote: "${recognizedText}". Use this text as context for the meme.`
+        ? `The user wrote: "${recognizedText}". This is their creative direction — generate a meme that DELIVERS on this intent (e.g., if they wrote "yo momma joke", generate an actual yo momma joke as the caption).`
         : undefined;
       const interpretation = await interpretSketch(dataUrl, hint);
       debugLog.info('Lasso meme: interpretation', interpretation);
@@ -472,7 +472,7 @@ function App() {
       // Try AI image generation, fall back to procedural template
       let bitmapDataUrl: string | null = null;
       try {
-        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl);
+        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl, recognizedText || undefined);
       } catch (err) {
         debugLog.warn('Lasso meme: AI image generation failed, using procedural', err);
       }
