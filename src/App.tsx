@@ -36,6 +36,12 @@ import { createPaletteIntent } from './palette';
 import type { PaletteIntent, PaletteAction } from './palette';
 import { Toaster } from './toast/Toast';
 import { useMemeMode } from './hooks/useMemeMode';
+import { interpretSketch, generateMemeImage } from './elements/meme/memeService';
+import { createMemeElement } from './elements/meme/types';
+import type { MemeElement } from './elements/meme/types';
+import { renderMemeToBitmap } from './elements/meme/templates';
+import { strokesToImage } from './elements/meme/memeUtils';
+import { getRecognitionService } from './recognition/RecognitionService';
 import './App.css';
 
 
@@ -131,6 +137,9 @@ function App() {
 
   // Track lasso selection intent (pending lasso selection with menu)
   const [selectionIntent, setSelectionIntent] = useState<SelectionIntent | null>(null);
+
+  // Track meme generation from lasso
+  const [isGeneratingMeme, setIsGeneratingMeme] = useState(false);
 
   // Track disambiguation intent (pending shape disambiguation with menu)
   const [disambiguationIntent, setDisambiguationIntent] = useState<DisambiguationIntent | null>(null);
@@ -399,6 +408,113 @@ function App() {
     localStorage.removeItem(VIEWPORT_STORAGE_KEY);
     debugLog.action('Created new note');
   }, [resetNote]);
+
+  // Handle meme generation from lasso selection
+  const handleMemeGenerate = useCallback(async (intent: SelectionIntent) => {
+    setIsGeneratingMeme(true);
+
+    const selectedStrokes: Stroke[] = [];
+    for (const el of intent.selectedElements) {
+      if (el.type === 'stroke') {
+        selectedStrokes.push(...el.strokes);
+      }
+    }
+
+    if (selectedStrokes.length === 0) {
+      debugLog.warn('Lasso meme: no strokes found in selected elements');
+      setIsGeneratingMeme(false);
+      return;
+    }
+
+    const { dataUrl } = strokesToImage(selectedStrokes);
+
+    // Show placeholder immediately so the user gets visual feedback
+    const memeWidth = Math.min(Math.max(intent.lassoBounds.right - intent.lassoBounds.left, 300), 500);
+    const memeHeight = Math.min(Math.max(intent.lassoBounds.bottom - intent.lassoBounds.top, 300), 500);
+    const placeholder = createMemeElement(
+      intent.lassoBounds.left,
+      intent.lassoBounds.top,
+      'pepe',
+      [],
+      memeWidth,
+      memeHeight,
+    );
+    placeholder.isGenerating = true;
+
+    const selectedIds = new Set(intent.selectedElements.map(el => el.id));
+    selectedIds.add(intent.lassoElementId);
+    setCurrentNote(prev => ({
+      ...prev,
+      elements: [
+        ...prev.elements.filter(el => !selectedIds.has(el.id)),
+        placeholder,
+      ],
+    }));
+    setSelectionIntent(null);
+
+    try {
+      // Recognition for text context (non-fatal, runs while placeholder is visible)
+      let recognizedText = '';
+      try {
+        const result = await getRecognitionService().recognizeGoogle(selectedStrokes);
+        recognizedText = result.rawText;
+        debugLog.info('Lasso meme: recognized text', { text: recognizedText });
+      } catch {
+        debugLog.info('Lasso meme: recognition unavailable, proceeding without text context');
+      }
+
+      const hint = recognizedText
+        ? `The user wrote: "${recognizedText}". Use this text as context for the meme.`
+        : undefined;
+      const interpretation = await interpretSketch(dataUrl, hint);
+      debugLog.info('Lasso meme: interpretation', interpretation);
+
+      // Try AI image generation, fall back to procedural template
+      let bitmapDataUrl: string | null = null;
+      try {
+        bitmapDataUrl = await generateMemeImage(interpretation, dataUrl);
+      } catch (err) {
+        debugLog.warn('Lasso meme: AI image generation failed, using procedural', err);
+      }
+
+      if (!bitmapDataUrl) {
+        bitmapDataUrl = renderMemeToBitmap(
+          interpretation.category,
+          interpretation.variant || '',
+          interpretation.texts,
+          interpretation.width || memeWidth,
+          interpretation.height || memeHeight,
+        );
+      }
+
+      const finalMeme: MemeElement = {
+        ...placeholder,
+        category: interpretation.category,
+        variant: interpretation.variant,
+        texts: interpretation.texts,
+        width: interpretation.width || memeWidth,
+        height: interpretation.height || memeHeight,
+        bitmapDataUrl: bitmapDataUrl || undefined,
+        sourceDescription: interpretation.description,
+        isGenerating: false,
+      };
+      setCurrentNote(prev => ({
+        ...prev,
+        elements: prev.elements.map(el =>
+          el.id === placeholder.id ? finalMeme : el
+        ),
+      }));
+    } catch (err) {
+      debugLog.error('Lasso meme generation failed', err);
+      // Remove the stuck placeholder so it doesn't linger on canvas
+      setCurrentNote(prev => ({
+        ...prev,
+        elements: prev.elements.filter(el => el.id !== placeholder.id),
+      }));
+    } finally {
+      setIsGeneratingMeme(false);
+    }
+  }, [setCurrentNote]);
 
   /*
    * TODO: Uses screen coordinates, not canvas coordinates. When the viewport
@@ -1061,6 +1177,8 @@ function App() {
           onElementsMove={handleElementsMove}
           selectionIntent={selectionIntent}
           onSelectionIntentChange={setSelectionIntent}
+          onMemeGenerate={handleMemeGenerate}
+          isGeneratingMeme={isGeneratingMeme}
           disambiguationIntent={disambiguationIntent}
           onDisambiguationAction={handleDisambiguationAction}
           paletteIntent={paletteIntent}

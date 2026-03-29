@@ -64,6 +64,9 @@ export interface InkCanvasProps {
   // Lasso selection intent props
   selectionIntent?: SelectionIntent | null;
   onSelectionIntentChange?: (intent: SelectionIntent | null) => void;
+  // Meme generation from lasso
+  onMemeGenerate?: (intent: SelectionIntent) => void;
+  isGeneratingMeme?: boolean;
   // Disambiguation props
   disambiguationIntent?: DisambiguationIntent | null;
   onDisambiguationAction?: (action: DisambiguationAction, candidate?: DisambiguationCandidate) => void;
@@ -93,6 +96,8 @@ export function InkCanvas({
   onElementsMove,
   selectionIntent,
   onSelectionIntentChange,
+  onMemeGenerate,
+  isGeneratingMeme,
   disambiguationIntent,
   onDisambiguationAction,
   paletteIntent,
@@ -1342,12 +1347,19 @@ export function InkCanvas({
         onSelectionIntentChange?.(null);
         break;
 
+      case 'meme':
+        // Trigger meme generation — keep intent visible for loading state
+        if (selectionIntent) {
+          onMemeGenerate?.(selectionIntent);
+        }
+        break;
+
       case 'dismiss':
         // Just clear the intent - lasso stroke remains as content
         onSelectionIntentChange?.(null);
         break;
     }
-  }, [selectionIntent, onSelectionChange, onSelectionIntentChange, noteElements.elements, onElementsChange]);
+  }, [selectionIntent, onSelectionChange, onSelectionIntentChange, noteElements.elements, onElementsChange, onMemeGenerate]);
 
   // Create a wrapper for canvasToScreen for the LassoMenu
   const canvasToScreenWrapper = useCallback((point: { x: number; y: number }) => {
@@ -1393,6 +1405,7 @@ export function InkCanvas({
         intent={selectionIntent ?? null}
         onAction={handleLassoAction}
         canvasToScreen={canvasToScreenWrapper}
+        isGeneratingMeme={isGeneratingMeme}
       />
       {/* Disambiguation menu */}
       <DisambiguationMenu
