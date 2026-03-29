@@ -6,9 +6,9 @@ import type { MemeCategory, MemeText } from './types';
 
 // Free vision models on OpenRouter (fallback order)
 const VISION_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
   'google/gemma-3-27b-it:free',
-  'meta-llama/llama-4-scout:free',
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'google/gemma-3-12b-it:free',
 ];
 
 export interface MemeInterpretation {
@@ -98,16 +98,8 @@ Use the drawn content as inspiration. If text is written, incorporate it. If a f
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const is429 = msg.includes('429');
-      console.warn(`[MemeService] ${model} failed${is429 ? ' (rate limited)' : ''}: ${msg}`);
-      // Only fall through to next model on 429; other errors are fatal
-      if (!is429) {
-        return {
-          category: 'impact',
-          texts: [{ text: 'meme generation failed', position: 'top' }],
-          description: `Failed: ${msg}`,
-        };
-      }
+      console.warn(`[MemeService] ${model} failed: ${msg}`);
+      // Fall through to next model
     }
   }
 
