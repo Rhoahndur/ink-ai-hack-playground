@@ -8,6 +8,14 @@ import { renderMemeToCanvas } from './templates';
 const MAX_CACHE_SIZE = 10;
 const imageCache = new Map<string, HTMLImageElement>();
 
+// Callback to request a canvas repaint when an image finishes loading
+let requestRepaint: (() => void) | null = null;
+
+/** Register a callback that the renderer calls when an async image finishes decoding. */
+export function setRepaintCallback(cb: () => void) {
+  requestRepaint = cb;
+}
+
 function getOrLoadImage(key: string, src: string): HTMLImageElement | null {
   const existing = imageCache.get(key);
   if (existing && existing.src === src) return existing;
@@ -19,6 +27,10 @@ function getOrLoadImage(key: string, src: string): HTMLImageElement | null {
   }
 
   const img = new Image();
+  img.onload = () => {
+    // Image decoded — trigger a repaint so it appears immediately
+    requestRepaint?.();
+  };
   img.src = src;
   imageCache.set(key, img);
   return img;

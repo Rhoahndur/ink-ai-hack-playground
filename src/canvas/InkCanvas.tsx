@@ -15,6 +15,7 @@ import {
   canvasToScreen,
 } from './ViewportManager';
 import { renderElement, getElementBounds } from '../elements/rendering/ElementRenderer';
+import { setRepaintCallback } from '../elements/meme/renderer';
 import { findHandleAtPoint, dispatchHandleDrag, getAllHandles } from '../elements';
 import { renderHandles } from './HandleRenderer';
 import { renderStroke, isPointNearStroke } from './StrokeRenderer';
@@ -345,6 +346,12 @@ export function InkCanvas({
       overlay.removeEventListener('touchstart', prevent);
       overlay.removeEventListener('touchmove', prevent);
     };
+  }, []);
+
+  // Register repaint callback so async-loaded meme images trigger a redraw
+  useEffect(() => {
+    setRepaintCallback(() => render());
+    return () => setRepaintCallback(() => {});
   }, []);
 
   // Render the main canvas (static content)
