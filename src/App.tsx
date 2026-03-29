@@ -45,6 +45,8 @@ const STROKE_ANIMATION_DURATION = 500;
 
 // Debounce delay for collecting strokes before processing
 const STROKE_DEBOUNCE_MS = 650;
+// Longer debounce for meme mode — lets the user finish their whole drawing
+const MEME_DEBOUNCE_MS = 2500;
 
 // Filter out StrokeElements whose strokes have been consumed by another element
 function removeConsumedStrokeElements(elements: Element[], consumedStrokes: Set<Stroke>): Element[] {
@@ -726,8 +728,10 @@ function App() {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Set new timeout to process buffered strokes
-    debugLog.info('Debounce timer started', { bufferSize: strokeBufferRef.current.length, delayMs: STROKE_DEBOUNCE_MS });
+    // Set new timeout to process buffered strokes — use longer debounce in meme mode
+    // so the user can finish their whole sketch before we send it to the vision model
+    const debounceMs = memeModeRef.current ? MEME_DEBOUNCE_MS : STROKE_DEBOUNCE_MS;
+    debugLog.info('Debounce timer started', { bufferSize: strokeBufferRef.current.length, delayMs: debounceMs });
     debounceTimeoutRef.current = setTimeout(() => {
       const strokesToProcess = strokeBufferRef.current;
       strokeBufferRef.current = [];
@@ -830,7 +834,7 @@ function App() {
       }
 
       processStrokes(strokesToProcess);
-    }, STROKE_DEBOUNCE_MS);
+    }, debounceMs);
   }, [processStrokes, setCurrentNote, processMemeModeStrokes]);
 
   // Handle elements change (for eraser)

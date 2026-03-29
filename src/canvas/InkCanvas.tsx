@@ -29,6 +29,13 @@ import type { PaletteIntent, PaletteAction } from '../palette';
 
 export type Tool = 'pen' | 'eraser' | 'pan' | 'select';
 
+/** Safely call preventDefault — skips on passive listeners (touch via React delegation) */
+function safePreventDefault(e: { nativeEvent?: Event; preventDefault: () => void }) {
+  if (!e.nativeEvent || e.nativeEvent.cancelable !== false) {
+    e.preventDefault();
+  }
+}
+
 const PINCH_ZOOM_SENSITIVITY = 0.002;
 const TAP_MAX_DISTANCE = 10; // Max screen pixels finger can move and still count as tap
 const TAP_MAX_DURATION = 300; // Max ms for a tap gesture
@@ -631,7 +638,7 @@ export function InkCanvas({
   // Handle mouse wheel for zoom and pan
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
-      e.preventDefault();
+      safePreventDefault(e);
 
       if (e.ctrlKey || e.metaKey) {
         // Pinch zoom
@@ -698,7 +705,7 @@ export function InkCanvas({
 
       // Ignore 3+ simultaneous fingers
       if (activeTouches.current.size > 2) {
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -746,7 +753,7 @@ export function InkCanvas({
           x: (points[0].x + points[1].x) / 2,
           y: (points[0].y + points[1].y) / 2,
         };
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -762,7 +769,7 @@ export function InkCanvas({
         });
 
         if (tryStartHandleDrag(canvasPoint, overlay, e.pointerId)) {
-          e.preventDefault();
+          safePreventDefault(e);
           return;
         }
 
@@ -774,7 +781,7 @@ export function InkCanvas({
           setIsDragging(true);
           isDraggingRef.current = true;
           dragStartCanvasPos.current = canvasPoint;
-          e.preventDefault();
+          safePreventDefault(e);
           return;
         }
 
@@ -782,7 +789,7 @@ export function InkCanvas({
         setIsPanning(true);
         isPanningRef.current = true;
         lastPanPos.current = { x: e.clientX, y: e.clientY };
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
     }
@@ -793,7 +800,7 @@ export function InkCanvas({
       isPanningRef.current = true;
       lastPanPos.current = { x: e.clientX, y: e.clientY };
       overlay.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      safePreventDefault(e);
     } else if (currentTool === 'pen' && e.button === 0) {
       // Convert screen to canvas coordinates
       const canvasPoint = screenToCanvas(viewport, {
@@ -820,7 +827,7 @@ export function InkCanvas({
 
       // Check for element handles FIRST - handles take precedence over inking
       if (tryStartHandleDrag(canvasPoint, overlay, e.pointerId)) {
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -843,7 +850,7 @@ export function InkCanvas({
       setIsDrawing(true);
       onDrawingStart?.();
       overlay.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      safePreventDefault(e);
     } else if (currentTool === 'eraser' && e.button === 0) {
       // Start erasing
       setIsErasing(true);
@@ -853,7 +860,7 @@ export function InkCanvas({
       });
       eraseAt(canvasPoint.x, canvasPoint.y);
       overlay.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      safePreventDefault(e);
     } else if (currentTool === 'select' && e.button === 0) {
       const canvasPoint = screenToCanvas(viewport, {
         x: e.nativeEvent.offsetX,
@@ -862,7 +869,7 @@ export function InkCanvas({
 
       // Check for element handles first
       if (tryStartHandleDrag(canvasPoint, overlay, e.pointerId)) {
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -875,7 +882,7 @@ export function InkCanvas({
         isDraggingRef.current = true;
         dragStartCanvasPos.current = canvasPoint;
         overlay.setPointerCapture(e.pointerId);
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -890,7 +897,7 @@ export function InkCanvas({
         isDraggingRef.current = true;
         dragStartCanvasPos.current = canvasPoint;
         overlay.setPointerCapture(e.pointerId);
-        e.preventDefault();
+        safePreventDefault(e);
         return;
       }
 
@@ -903,7 +910,7 @@ export function InkCanvas({
       marqueeStart.current = canvasPoint;
       marqueeCurrent.current = canvasPoint;
       overlay.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      safePreventDefault(e);
     }
   }, [shouldPan, currentTool, viewport, brushColor, brushSize, eraseAt, getElementAtPoint, selectedElementIds, onSelectionChange, selectionIntent, onSelectionIntentChange, disambiguationIntent, onDisambiguationAction, paletteIntent, onPaletteAction, noteElements.elements, onElementsChange, onDrawingStart, tryStartHandleDrag, isHandleDragging, activeHandle]);
 
@@ -1241,7 +1248,7 @@ export function InkCanvas({
 
   // Prevent context menu on right-click (we use it for panning)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+    safePreventDefault(e);
   }, []);
 
   // Fit to content on initial load only (once canvas is sized), skip if viewport was restored

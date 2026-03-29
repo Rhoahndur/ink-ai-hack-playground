@@ -73,6 +73,9 @@ export function useMemeMode(): UseMemeMode {
   const memeModeRef = useRef(false);
   const [isInterpreting, setIsInterpreting] = useState(false);
   const interpretingRef = useRef(false);
+  // Queue strokes that arrive while an interpretation is in progress
+  const pendingStrokesRef = useRef<Stroke[]>([]);
+  const pendingSetNoteRef = useRef<((updater: (prev: NoteElements) => NoteElements) => void) | null>(null);
 
   const setMemeMode = useCallback((on: boolean) => {
     memeModeRef.current = on;
@@ -89,7 +92,15 @@ export function useMemeMode(): UseMemeMode {
     strokes: Stroke[],
     setCurrentNote: (updater: (prev: NoteElements) => NoteElements) => void,
   ) => {
-    if (strokes.length === 0 || interpretingRef.current) return;
+    if (strokes.length === 0) return;
+
+    // If already interpreting, queue these strokes for after current finishes
+    if (interpretingRef.current) {
+      debugLog.info('Meme mode: queuing strokes (interpretation in progress)', { count: strokes.length });
+      pendingStrokesRef.current = [...pendingStrokesRef.current, ...strokes];
+      pendingSetNoteRef.current = setCurrentNote;
+      return;
+    }
 
     debugLog.info('Meme mode: processing strokes', { count: strokes.length });
     interpretingRef.current = true;
@@ -166,6 +177,16 @@ export function useMemeMode(): UseMemeMode {
     } finally {
       interpretingRef.current = false;
       setIsInterpreting(false);
+
+      // Process any strokes that arrived while we were interpreting
+      if (pendingStrokesRef.current.length > 0 && pendingSetNoteRef.current) {
+        const queued = pendingStrokesRef.current;
+        const queuedSetNote = pendingSetNoteRef.current;
+        pendingStrokesRef.current = [];
+        pendingSetNoteRef.current = null;
+        debugLog.info('Meme mode: processing queued strokes', { count: queued.length });
+        processMemeModeStrokes(queued, queuedSetNote);
+      }
     }
   }, []);
 
