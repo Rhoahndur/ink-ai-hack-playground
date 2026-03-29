@@ -6,7 +6,7 @@ export interface UndoRedoState<T> {
   current: T;
   canUndo: boolean;
   canRedo: boolean;
-  set: (value: T) => void;
+  set: (value: T | ((prev: T) => T)) => void;
   undo: () => void;
   redo: () => void;
   reset: (value: T) => void;
@@ -34,12 +34,18 @@ export function useUndoRedo<T>(
   });
 
   // Set new value and push current to undo stack
-  const set = useCallback((value: T) => {
-    setState((prev) => ({
-      current: value,
-      undoStack: [...prev.undoStack.slice(-(maxHistory - 1)), prev.current],
-      redoStack: [], // Clear redo stack on new action
-    }));
+  // Supports both raw values and updater functions (like React's setState)
+  const set = useCallback((valueOrUpdater: T | ((prev: T) => T)) => {
+    setState((prev) => {
+      const newValue = typeof valueOrUpdater === 'function'
+        ? (valueOrUpdater as (prev: T) => T)(prev.current)
+        : valueOrUpdater;
+      return {
+        current: newValue,
+        undoStack: [...prev.undoStack.slice(-(maxHistory - 1)), prev.current],
+        redoStack: [], // Clear redo stack on new action
+      };
+    });
   }, [maxHistory]);
 
   // Undo last action
