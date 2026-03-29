@@ -67,141 +67,191 @@ function drawPepe(
   variant: string,
 ) {
   const cx = x + w / 2;
-  const cy = y + h / 2;
-  const r = Math.min(w, h) * 0.4;
+  const cy = y + h * 0.48;
+  const faceW = Math.min(w, h) * 0.48;
+  const faceH = faceW * 0.7;
 
-  // Face (green)
   ctx.save();
+
+  // ── Pepe frog head shape ──
+  // Wide, flat frog face — wider than tall, with a slight pear shape
   ctx.fillStyle = '#6B8E23';
   ctx.beginPath();
-  ctx.ellipse(cx, cy, r, r * 0.85, 0, 0, Math.PI * 2);
+  // Start at top-center, draw the wide frog head with bezier curves
+  ctx.moveTo(cx, cy - faceH * 0.8);
+  // Top-right curve (forehead)
+  ctx.bezierCurveTo(
+    cx + faceW * 0.5, cy - faceH * 0.85,
+    cx + faceW * 1.0, cy - faceH * 0.4,
+    cx + faceW * 0.95, cy + faceH * 0.05,
+  );
+  // Right cheek — wide and puffy
+  ctx.bezierCurveTo(
+    cx + faceW * 0.95, cy + faceH * 0.5,
+    cx + faceW * 0.7, cy + faceH * 0.95,
+    cx, cy + faceH * 0.85,
+  );
+  // Left cheek — mirror
+  ctx.bezierCurveTo(
+    cx - faceW * 0.7, cy + faceH * 0.95,
+    cx - faceW * 0.95, cy + faceH * 0.5,
+    cx - faceW * 0.95, cy + faceH * 0.05,
+  );
+  // Top-left curve (forehead)
+  ctx.bezierCurveTo(
+    cx - faceW * 1.0, cy - faceH * 0.4,
+    cx - faceW * 0.5, cy - faceH * 0.85,
+    cx, cy - faceH * 0.8,
+  );
   ctx.fill();
-  ctx.strokeStyle = '#3d5213';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Eyes
-  const eyeY = cy - r * 0.15;
-  const eyeSpacing = r * 0.35;
-  const eyeR = r * 0.22;
-
-  // White of eyes (bulging out of head)
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.ellipse(cx - eyeSpacing, eyeY - r * 0.1, eyeR * 1.3, eyeR * 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#3d5213';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(cx + eyeSpacing, eyeY - r * 0.1, eyeR * 1.3, eyeR * 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // Pupils - vary by variant
-  ctx.fillStyle = '#000000';
-  const pupilR = eyeR * 0.5;
-  let pupilOffsetX = 0;
-  let pupilOffsetY = 0;
-
-  if (variant === 'smug') {
-    pupilOffsetX = pupilR * 0.3;
-    pupilOffsetY = pupilR * 0.3;
-  } else if (variant === 'thinking') {
-    pupilOffsetX = pupilR * 0.5;
-    pupilOffsetY = -pupilR * 0.3;
-  }
-
-  ctx.beginPath();
-  ctx.arc(cx - eyeSpacing + pupilOffsetX, eyeY - r * 0.1 + pupilOffsetY, pupilR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(cx + eyeSpacing + pupilOffsetX, eyeY - r * 0.1 + pupilOffsetY, pupilR, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mouth - varies by variant
-  const mouthY = cy + r * 0.3;
   ctx.strokeStyle = '#3d5213';
   ctx.lineWidth = 2.5;
-  ctx.beginPath();
+  ctx.stroke();
+
+  // ── Big frog eyes (sitting on top of head, protruding) ──
+  const eyeY = cy - faceH * 0.45;
+  const eyeSpacing = faceW * 0.42;
+  const eyeRx = faceW * 0.32;
+  const eyeRy = faceW * 0.36;
+
+  // Eye whites — large ovals that protrude above head
+  ctx.fillStyle = '#ffffff';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(cx + eyeSpacing * side, eyeY, eyeRx, eyeRy, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3d5213';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Pupils — vary by variant
+  ctx.fillStyle = '#000000';
+  const pupilR = eyeRx * 0.38;
+  let plx = 0, ply = 0, prx = 0, pry = 0;
+
+  if (variant === 'smug') {
+    plx = pupilR * 0.5; ply = pupilR * 0.4;
+    prx = pupilR * 0.5; pry = pupilR * 0.4;
+  } else if (variant === 'thinking') {
+    plx = pupilR * 0.6; ply = -pupilR * 0.3;
+    prx = pupilR * 0.6; pry = -pupilR * 0.3;
+  } else if (variant === 'sad') {
+    ply = pupilR * 0.5; pry = pupilR * 0.5;
+  }
+
+  if (variant !== 'comfy') {
+    ctx.beginPath();
+    ctx.arc(cx - eyeSpacing + plx, eyeY + ply, pupilR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + eyeSpacing + prx, eyeY + pry, pupilR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── Wide frog mouth — the signature Pepe feature ──
+  const mouthY = cy + faceH * 0.25;
+  const mouthW = faceW * 0.75;
+
+  ctx.strokeStyle = '#3d5213';
+  ctx.lineWidth = 2.5;
 
   switch (variant) {
-    case 'smug':
-      // Smug smirk
-      ctx.moveTo(cx - r * 0.3, mouthY);
-      ctx.quadraticCurveTo(cx, mouthY - r * 0.15, cx + r * 0.4, mouthY - r * 0.1);
+    case 'smug': {
+      // Smug smirk — asymmetric, one side up
+      ctx.beginPath();
+      ctx.moveTo(cx - mouthW, mouthY + faceH * 0.05);
+      ctx.quadraticCurveTo(cx, mouthY - faceH * 0.1, cx + mouthW, mouthY - faceH * 0.12);
       ctx.stroke();
       break;
-    case 'sad':
-      // Sad frown
-      ctx.moveTo(cx - r * 0.3, mouthY + r * 0.1);
-      ctx.quadraticCurveTo(cx, mouthY - r * 0.15, cx + r * 0.3, mouthY + r * 0.1);
-      ctx.stroke();
-      // Tears
-      ctx.fillStyle = '#4444ff88';
+    }
+    case 'sad': {
+      // Sad frown — wide downturned
       ctx.beginPath();
-      ctx.ellipse(cx - eyeSpacing, eyeY + r * 0.15, pupilR * 0.6, pupilR * 1.5, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(cx - mouthW * 0.8, mouthY + faceH * 0.15);
+      ctx.quadraticCurveTo(cx, mouthY - faceH * 0.1, cx + mouthW * 0.8, mouthY + faceH * 0.15);
+      ctx.stroke();
+      // Tears streaming from eyes
+      ctx.fillStyle = '#4488ff66';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + eyeSpacing * side - pupilR * 0.5, eyeY + eyeRy * 0.6);
+        ctx.lineTo(cx + eyeSpacing * side, eyeY + eyeRy * 1.8);
+        ctx.lineTo(cx + eyeSpacing * side + pupilR * 0.5, eyeY + eyeRy * 0.6);
+        ctx.fill();
+      }
       break;
-    case 'angry':
-      // Angry grimace
-      ctx.moveTo(cx - r * 0.3, mouthY);
-      ctx.lineTo(cx - r * 0.1, mouthY + r * 0.08);
-      ctx.lineTo(cx + r * 0.1, mouthY - r * 0.05);
-      ctx.lineTo(cx + r * 0.3, mouthY + r * 0.05);
-      ctx.stroke();
-      // Angry eyebrows
-      ctx.lineWidth = 3;
+    }
+    case 'angry': {
+      // Angry zigzag mouth
       ctx.beginPath();
-      ctx.moveTo(cx - eyeSpacing - eyeR, eyeY - r * 0.3);
-      ctx.lineTo(cx - eyeSpacing + eyeR, eyeY - r * 0.18);
+      ctx.moveTo(cx - mouthW * 0.8, mouthY);
+      ctx.lineTo(cx - mouthW * 0.3, mouthY + faceH * 0.1);
+      ctx.lineTo(cx, mouthY - faceH * 0.05);
+      ctx.lineTo(cx + mouthW * 0.3, mouthY + faceH * 0.08);
+      ctx.lineTo(cx + mouthW * 0.8, mouthY);
+      ctx.stroke();
+      // Angry eyebrows — thick, angled inward
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - eyeSpacing - eyeRx, eyeY - eyeRy * 0.6);
+      ctx.lineTo(cx - eyeSpacing + eyeRx * 0.5, eyeY - eyeRy * 0.2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(cx + eyeSpacing + eyeR, eyeY - r * 0.3);
-      ctx.lineTo(cx + eyeSpacing - eyeR, eyeY - r * 0.18);
+      ctx.moveTo(cx + eyeSpacing + eyeRx, eyeY - eyeRy * 0.6);
+      ctx.lineTo(cx + eyeSpacing - eyeRx * 0.5, eyeY - eyeRy * 0.2);
       ctx.stroke();
       break;
-    case 'thinking':
-      // Thinking — hand on chin
-      ctx.moveTo(cx - r * 0.15, mouthY);
-      ctx.quadraticCurveTo(cx + r * 0.1, mouthY + r * 0.1, cx + r * 0.25, mouthY);
+    }
+    case 'thinking': {
+      // Small pursed mouth
+      ctx.beginPath();
+      ctx.moveTo(cx + mouthW * 0.05, mouthY);
+      ctx.quadraticCurveTo(cx + mouthW * 0.25, mouthY + faceH * 0.08, cx + mouthW * 0.4, mouthY);
       ctx.stroke();
-      // Hand/chin touch
+      // "Hand" touching chin — small green circle
       ctx.fillStyle = '#6B8E23';
       ctx.beginPath();
-      ctx.arc(cx + r * 0.5, mouthY + r * 0.15, r * 0.12, 0, Math.PI * 2);
+      ctx.arc(cx + mouthW * 0.6, mouthY + faceH * 0.18, faceW * 0.12, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#3d5213';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
       break;
-    case 'comfy':
-      // Content smile + blush
-      ctx.moveTo(cx - r * 0.25, mouthY - r * 0.05);
-      ctx.quadraticCurveTo(cx, mouthY + r * 0.2, cx + r * 0.25, mouthY - r * 0.05);
+    }
+    case 'comfy': {
+      // Content wide smile
+      ctx.beginPath();
+      ctx.moveTo(cx - mouthW * 0.7, mouthY);
+      ctx.quadraticCurveTo(cx, mouthY + faceH * 0.3, cx + mouthW * 0.7, mouthY);
       ctx.stroke();
-      // Closed happy eyes
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cx - eyeSpacing - eyeR * 0.6, eyeY - r * 0.05);
-      ctx.quadraticCurveTo(cx - eyeSpacing, eyeY - r * 0.15, cx - eyeSpacing + eyeR * 0.6, eyeY - r * 0.05);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + eyeSpacing - eyeR * 0.6, eyeY - r * 0.05);
-      ctx.quadraticCurveTo(cx + eyeSpacing, eyeY - r * 0.15, cx + eyeSpacing + eyeR * 0.6, eyeY - r * 0.05);
-      ctx.stroke();
-      // Blush
-      ctx.fillStyle = '#ff634788';
-      ctx.beginPath();
-      ctx.ellipse(cx - r * 0.45, mouthY - r * 0.05, r * 0.1, r * 0.06, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(cx + r * 0.45, mouthY - r * 0.05, r * 0.1, r * 0.06, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // Closed happy eyes — curved lines
+      ctx.lineWidth = 2.5;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + eyeSpacing * side - eyeRx * 0.6, eyeY + eyeRy * 0.1);
+        ctx.quadraticCurveTo(
+          cx + eyeSpacing * side, eyeY - eyeRy * 0.3,
+          cx + eyeSpacing * side + eyeRx * 0.6, eyeY + eyeRy * 0.1,
+        );
+        ctx.stroke();
+      }
+      // Rosy cheeks
+      ctx.fillStyle = '#ff634755';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(cx + faceW * 0.6 * side, mouthY, faceW * 0.12, faceW * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
       break;
-    default: // happy
-      ctx.moveTo(cx - r * 0.3, mouthY);
-      ctx.quadraticCurveTo(cx, mouthY + r * 0.25, cx + r * 0.3, mouthY);
+    }
+    default: {
+      // Happy — classic wide Pepe smile
+      ctx.beginPath();
+      ctx.moveTo(cx - mouthW * 0.8, mouthY);
+      ctx.quadraticCurveTo(cx, mouthY + faceH * 0.35, cx + mouthW * 0.8, mouthY);
       ctx.stroke();
+    }
   }
 
   ctx.restore();
