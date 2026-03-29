@@ -4,8 +4,12 @@
 import { chatCompletionJSON, isOpenRouterConfigured, type ChatMessage } from '../../ai/OpenRouterService';
 import type { MemeCategory, MemeText } from './types';
 
-// Free vision model on OpenRouter
-const VISION_MODEL = 'google/gemma-3-27b-it:free';
+// Free vision models on OpenRouter (fallback order)
+const VISION_MODELS = [
+  'google/gemini-2.0-flash-exp:free',
+  'google/gemma-3-27b-it:free',
+  'meta-llama/llama-4-scout:free',
+];
 
 export interface MemeInterpretation {
   category: MemeCategory;
@@ -70,35 +74,49 @@ Use the drawn content as inspiration. If text is written, incorporate it. If a f
     },
   ];
 
-  try {
-    const parsed = await chatCompletionJSON<Record<string, unknown>>(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      {
-        model: VISION_MODEL,
-        temperature: 0.7,
-        maxTokens: 500,
-      },
-    );
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userContent },
+  ];
 
-    return {
-      category: (parsed.category as MemeCategory) || 'impact',
-      variant: parsed.variant as string | undefined,
-      texts: Array.isArray(parsed.texts) ? parsed.texts : [],
-      description: (parsed.description as string) || '',
-      width: (parsed.width as number) || 400,
-      height: (parsed.height as number) || 400,
-    };
-  } catch (err) {
-    console.error('[MemeService] interpretSketch failed:', err);
-    return {
-      category: 'impact',
-      texts: [{ text: 'meme generation failed', position: 'top' }],
-      description: `Failed: ${err instanceof Error ? err.message : String(err)}`,
-    };
+  // Try each vision model, falling back on 429 rate limits
+  for (const model of VISION_MODELS) {
+    try {
+      console.log(`[MemeService] Trying model: ${model}`);
+      const parsed = await chatCompletionJSON<Record<string, unknown>>(
+        messages,
+        { model, temperature: 0.7, maxTokens: 500 },
+      );
+
+      return {
+        category: (parsed.category as MemeCategory) || 'impact',
+        variant: parsed.variant as string | undefined,
+        texts: Array.isArray(parsed.texts) ? parsed.texts : [],
+        description: (parsed.description as string) || '',
+        width: (parsed.width as number) || 400,
+        height: (parsed.height as number) || 400,
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const is429 = msg.includes('429');
+      console.warn(`[MemeService] ${model} failed${is429 ? ' (rate limited)' : ''}: ${msg}`);
+      // Only fall through to next model on 429; other errors are fatal
+      if (!is429) {
+        return {
+          category: 'impact',
+          texts: [{ text: 'meme generation failed', position: 'top' }],
+          description: `Failed: ${msg}`,
+        };
+      }
+    }
   }
+
+  // All models rate-limited
+  return {
+    category: 'impact',
+    texts: [{ text: 'all models rate limited — try again shortly', position: 'top' }],
+    description: 'All free vision models are currently rate-limited. Please wait a moment and try again.',
+  };
 }
 
 /**
