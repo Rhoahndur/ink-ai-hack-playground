@@ -46,7 +46,7 @@ const STROKE_ANIMATION_DURATION = 500;
 // Debounce delay for collecting strokes before processing
 const STROKE_DEBOUNCE_MS = 650;
 // Longer debounce for meme mode — lets the user finish their whole drawing
-const MEME_DEBOUNCE_MS = 2500;
+const MEME_DEBOUNCE_MS = 4000;
 
 // Filter out StrokeElements whose strokes have been consumed by another element
 function removeConsumedStrokeElements(elements: Element[], consumedStrokes: Set<Stroke>): Element[] {

@@ -142,18 +142,33 @@ export async function chatCompletionImage(
   const data: any = await res.json();
   const content = data?.choices?.[0]?.message?.content;
 
+  // Log the raw response structure so we can debug the format
+  console.log('[OpenRouter] Image gen raw response:', JSON.stringify(data?.choices?.[0]?.message, null, 2)?.slice(0, 2000));
+
   // Response can be multimodal array or a string
   if (Array.isArray(content)) {
     for (const part of content) {
+      // OpenAI-style: { type: "image_url", image_url: { url: "data:..." } }
       if (part.type === 'image_url' && part.image_url?.url) {
         return part.image_url.url;
       }
-      // Some models use inline_data format
+      // Anthropic-style: { type: "image", source: { data: "base64...", media_type: "image/png" } }
       if (part.type === 'image' && part.source?.data) {
         const mime = part.source.media_type || 'image/png';
         return `data:${mime};base64,${part.source.data}`;
       }
+      // Gemini-style: { type: "text", text: "..." } with inline base64
+      // or { inlineData: { mimeType: "image/png", data: "base64..." } }
+      if (part.inlineData?.data) {
+        const mime = part.inlineData.mimeType || 'image/png';
+        return `data:${mime};base64,${part.inlineData.data}`;
+      }
     }
+  }
+
+  // Some models return the image as a plain base64 string
+  if (typeof content === 'string' && content.startsWith('data:image')) {
+    return content;
   }
 
   return null;
