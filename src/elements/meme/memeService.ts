@@ -58,6 +58,13 @@ IMPORTANT RULES:
 - A progression or ranking = "brain"
 - Make the caption TEXT genuinely funny! Think like a top meme creator. Punchlines, wordplay, relatable humor.
 
+CRITICAL — "texts" vs "description":
+- "texts" = ONLY the actual caption text that appears ON the meme image. These are the punchlines, jokes, and captions the viewer reads.
+- "description" = your internal notes about what you see and the user's intent. This is metadata, NOT displayed on the meme.
+- NEVER put instructions, descriptions, style notes, or meta-commentary in "texts". Only the joke/caption itself.
+- Example WRONG: texts: [{"text": "yo momma joke", "position": "top"}, {"text": "classic punchline with dumb humor", "position": "bottom"}]
+- Example RIGHT: texts: [{"text": "Yo momma so slow, she took 2 hours to watch 60 Minutes", "position": "top"}]
+
 Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
 {
   "category": "pepe" | "wojak" | "drake" | "brain" | "impact",
@@ -65,7 +72,7 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
   "texts": [
     {"text": "<caption text>", "position": "top" | "bottom"}
   ],
-  "description": "<brief description of what you see AND the user's intent>",
+  "description": "<your internal notes: what you see, user's intent, style choices — NOT shown on meme>",
   "width": 400,
   "height": 400
 }
@@ -76,6 +83,11 @@ Category details:
 - "drake": Two-panel Drake format. Must have exactly 2 texts: first with position "top" (rejected thing), second with position "bottom" (approved thing). Use height: 400.
 - "brain": Expanding brain. 2-4 texts from least to most "enlightened". All position "custom". Use height: 200 * number_of_panels.
 - "impact": Classic Impact font meme. Top and/or bottom text. ONLY use this if no character meme fits.
+
+TEXT COUNT RULES:
+- One-liner jokes (yo momma, puns, observations): Use ONLY 1 text entry. The whole joke goes in one "top" text. Do NOT split it or add a second "bottom" text with filler/description.
+- Setup + punchline format: Use 2 texts — "top" for setup, "bottom" for punchline. Both must be ACTUAL joke text.
+- NEVER add a text entry just to fill a slot. If the meme only needs one line, use one line.
 
 If a frog is drawn, use "pepe". If ANY face or expression is drawn, use "pepe" or "wojak". Match the variant to the emotion shown.`;
 
