@@ -65,7 +65,7 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
 }
 
 Category details:
-- "pepe": Pepe/Apu frog memes. USE THIS FOR MOST DRAWINGS. Variants: "smug", "sad", "angry", "happy", "thinking", "comfy"
+- "pepe": Apu Apustaja / frog memes (the cute wholesome helper frog). USE THIS FOR MOST DRAWINGS. Variants: "smug", "sad", "angry", "happy", "thinking", "comfy"
 - "wojak": Wojak face memes. Variants: "doomer", "bloomer", "chad", "soyjak", "crying"
 - "drake": Two-panel Drake format. Must have exactly 2 texts: first with position "top" (rejected thing), second with position "bottom" (approved thing). Use height: 400.
 - "brain": Expanding brain. 2-4 texts from least to most "enlightened". All position "custom". Use height: 200 * number_of_panels.
@@ -153,7 +153,7 @@ export async function generateMemeImage(
 
   // Build a detailed prompt for the image generation model
   const categoryDescriptions: Record<string, string> = {
-    pepe: 'Pepe the Frog (the classic green internet meme frog character)',
+    pepe: 'Apu Apustaja (the cute, round, simple green helper frog from the "apu" meme — NOT the edgy Pepe, but the wholesome round-faced Finnish helper frog with big round eyes)',
     wojak: 'Wojak (the classic bald-headed internet meme face character)',
     drake: 'Drake meme format (two panel comparison meme)',
     brain: 'Expanding brain meme',
@@ -161,12 +161,12 @@ export async function generateMemeImage(
   };
 
   const variantDescriptions: Record<string, string> = {
-    // Pepe variants
-    smug: 'with a smug, self-satisfied smirk expression',
-    sad: 'looking sad and depressed with tears',
-    angry: 'looking furious with an angry expression',
-    happy: 'with a big happy smile, cheerful expression',
-    thinking: 'with a thoughtful thinking expression, hand on chin',
+    // Apu/Pepe variants
+    smug: 'with a smug, self-satisfied little smirk, looking pleased with himself',
+    sad: 'looking sad with big watery eyes and a little frown, holding back tears',
+    angry: 'looking grumpy and annoyed with furrowed brow',
+    happy: 'with a big warm happy smile, cheerful and wholesome',
+    thinking: 'with a curious thoughtful expression, finger on chin',
     comfy: 'looking cozy and comfortable with a content smile',
     // Wojak variants
     doomer: 'as the Doomer archetype - wearing a dark beanie, dark circles under eyes, cigarette',
