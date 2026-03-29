@@ -1,7 +1,7 @@
 // Meme interpretation service — sends canvas screenshots to a free vision model
 // via OpenRouter to understand sketches and generate meme specifications.
 
-import { chatCompletionJSON, isOpenRouterConfigured } from '../../ai/OpenRouterService';
+import { chatCompletionJSON, isOpenRouterConfigured, type ChatMessage } from '../../ai/OpenRouterService';
 import type { MemeCategory, MemeText } from './types';
 
 // Free vision model on OpenRouter
@@ -57,10 +57,10 @@ Category details:
 
 Use the drawn content as inspiration. If text is written, incorporate it. If a frog/pepe is drawn, use "pepe" category. If a face is drawn, consider "wojak". Default to "impact" if unclear.`;
 
-  const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
+  const userContent: Exclude<ChatMessage['content'], string> = [
     {
       type: 'image_url',
-      image_url: { url: imageDataUrl },
+      imageUrl: { url: imageDataUrl },
     },
     {
       type: 'text',
